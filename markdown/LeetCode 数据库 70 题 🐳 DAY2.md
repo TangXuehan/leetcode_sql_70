@@ -709,6 +709,38 @@ all(
     from cte
     group by candidateId
 )
+
+# 方法4
+# 错误写法，好像是因为内层不能limit
+# This version of MySQL doesn't yet support 'LIMIT & IN/ALL/ANY/SOME subquery'
+# select
+#     name
+# from Candidate
+# where id in(
+#     select
+#         candidateId
+#     from Vote
+#     group by candidateId
+#     order by count(id)
+#     limit 1
+# )
+    
+# 正确写法
+select
+    name
+from Candidate
+where id in(
+    select
+        candidateId
+    from Vote
+    group by candidateId
+    having count(id)>=all(
+        select 
+            count(id)
+        from Vote
+        group by candidateId
+    )
+)
 ```
 
 #### [578. 查询回答率最高的问题](https://leetcode.cn/problems/get-highest-answer-rate-question/)【中等】
@@ -768,8 +800,8 @@ select
     question_id as survey_log 
 from(
     select
-    question_id
-    , dense_rank() over (order by count(answer_id)/count(timestamp) desc) as rnk  
+        question_id
+        , row_number() over (order by count(answer_id)/sum(if(action = 'show',1,0)) desc, question_id asc) as rnk  
     from SurveyLog
     group by question_id
 ) as tmp
@@ -790,13 +822,15 @@ select
     question_id as survey_log
 from SurveyLog
 group by question_id
-having count(answer_id)/count(timestamp) >=
+having count(answer_id)/sum(if(action = 'show',1,0)) >=
 all(
     select 
-        count(answer_id)/count(timestamp)
+        count(answer_id)/sum(if(action = 'show',1,0))
     from SurveyLog
     group by question_id
 )
+order by question_id
+limit 1
 ```
 
 #### [579. 查询员工的累计薪水](https://leetcode.cn/problems/find-cumulative-salary-of-an-employee/)【困难】
