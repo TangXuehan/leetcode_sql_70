@@ -382,15 +382,23 @@ Seat_id是该表的自动递增主键列。
 # 连续和self join一般都有关系，这题要会
 # seat_id 相差1，说明座位连续
 # 再加上free = 1，说明座位连续可用
-select 
+select
     distinct a.seat_id
-from Cinema a
-join Cinema b
+from Cinema a, Cinema b
 where a.seat_id <> b.seat_id
 and a.free = 1
 and b.free = 1
 and abs(a.seat_id - b.seat_id) = 1
 order by a.seat_id
+
+
+select 
+    distinct(c1.seat_id) 
+from cinema c1 
+join cinema c2
+on abs(c2.seat_id-c1.seat_id)=1
+where c1.free=1 and c2.free=1
+order by c1.seat_id
 ```
 #### [610. 判断三角形](https://leetcode.cn/problems/triangle-judgement/)
 **难度：简单**
@@ -664,6 +672,24 @@ from
 )as tmp
 group by num, rnk # 注意按照这两个分组
 having count(*)>=3
+
+# 这样写的话要注意：
+select
+     distinct Num as ConsecutiveNums
+from(
+    select
+        a.*
+        # , row_number() over(order by a.id) 
+        , Id - cast(row_number() over(order by a.num, a.id) as signed) as rnk2
+    from Logs as a
+) as tmp
+group by Num, rnk2
+having count(*) >= 3
+
+# 1. row_number 排序出的结果数据类型运算结果不能是负数
+# 2. id与row_number结果不能直接相减，要不然就cast(row_number()... as signed)，要不然就对id进行row_number()操作
+# 3. 如果不加partition by，按照我的理解，除了我们要求的order by a.num，我理解他还会默认次order by a.id（主键），但是经过测试，id为91的-10排在了id为32的-10前面，因此如果不加partition by，那么order要写成order by a.num, a.id
+# 4. 为什么要distinct：group by Num, rnk2，有可能出现相同的num不同rnk2的情况，这样就会筛选出两个同样的num，因此要加distinct。
 ```
 
 #### [1225. 报告系统状态的连续日期](https://leetcode.cn/problems/report-contiguous-dates/)【困难】
