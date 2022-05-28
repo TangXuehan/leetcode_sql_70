@@ -633,7 +633,7 @@ and TIV_2015 in
     group by TIV_2015
     having count(*) >= 2
 )
-# 没想明白这样写为啥不行：
+# 这样写不行，因为最内层会直接去掉一部分数据，如果说有一个成功的投资者在2015年投资金额与被去掉的数据中某人的投资金额相同，但又和没被去掉的人的投资金额不同，那么他就会被当作失败者，导致结果不一致。
 # select 
 #     sum(TIV_2016) as TIV_2016
 # from(
@@ -800,6 +800,9 @@ cte2 as (
 )
 # 此时cte2的结果为：
 #{"headers": ["player_id", "first_login", "event_date"], "values": [[1, "2016-03-01", "2016-03-02"], [2, "2017-06-25", null], [3, "2016-03-01", null]]}
+# 注意and datediff(b.event_date, first_login) = 1不能写成where datediff(b.event_date,a.event_date) = 1，如果写成where，那么cte2的结果为：
+# {"headers": ["player_id", "install_date", "rentention_date"], "values": [[1, "2016-03-01", "2016-03-02"]]}
+# 这样的原因是，on ... and... 的搭配，如果没有符合条件的，那么b.event_date会返回null，但是不会删除掉a表中的数据；如果是on...where...的搭配，那么如果X玩家没有第二天重新登陆的情况的话，a表对应的X的记录会直接被筛选没。
 select 
     first_login as install_dt
     , count(player_id) as installs
